@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "DockerImageName",
+    "ParameterValue": "aws-lambda-curl-url"
+  },
+  {
+    "ParameterKey": "EmailAddress",
+    "ParameterValue": "me@example.com"
+  },
+  {
+    "ParameterKey": "GitHubSourceHTTPS",
+    "ParameterValue": "https://github.com/example/my-project.git"
+  }
+]

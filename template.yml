@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Ingest contact form and send email with its contents
+
+Parameters: 
+  DockerImageName:
+    Description: Name of the Docker image stored in ECR
+    Type: String
+
+  EmailAddress:
+    Description: Email address to which to send the form data
+    Type: String
+
+  GitHubSourceHTTPS:
+    Description: HTTPS clone URL to the repository that contains the source and the buildspec file.
+    Type: String
+
+  CorsOrigins:
+    Description: (Optional) Valid origins to be matched in the Access-Control-Allow-Origin header
+    Type: CommaDelimitedList
+    Default: "*"
+
+  ProjectName:
+    Description: (Optional) Name must be unique across all projects in your AWS account
+    Type: String
+    Default: ContactFormHandler
+
+  RecaptchaEnabled:
+    Description: (Optional) Flag indicating if a Google Recaptcha token should be validated.
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
+    
+Resources: 
+  EcrRepository:
+     Type: AWS::ECR::Repository
+     Properties:
+       RepositoryName: !Ref DockerImageName
+
+  CodeBuildContactForm:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref ProjectName
+      Description: "Push Lambda container image to ECR"
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref "AWS::AccountId"
+          - Name: AWS_ECR_REPOSITORY_URI
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}
+          - Name: IMAGE_REPO_NAME
+            Value: !Ref EcrRepository
+          - Name: IMAGE_TAG
+            Value: "latest"
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        Auth: 
+          Type: "OAUTH"
+        Type: "GITHUB"
+        Location: !Ref GitHubSourceHTTPS
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PUSH
+  
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "GetEcrAuthToken"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+        - PolicyName: "PushImageToEcr"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:CompleteLayerUpload
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: "*"
+        - PolicyName: "CodeBuildLogsRole"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"       
+
+  RoleFormHandler:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
