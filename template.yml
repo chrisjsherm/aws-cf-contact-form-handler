@@ -61,7 +61,7 @@ Resources:
             Value: !Ref EcrRepository
           - Name: IMAGE_TAG
             Value: "latest"
-      ServiceRole: !GetAtt CodeBuildRole.Arn
+      ServiceRole: !GetAtt RoleCodeBuild.Arn
       Source:
         Auth: 
           Type: "OAUTH"
@@ -73,7 +73,7 @@ Resources:
           - - Type: EVENT
               Pattern: PULL_REQUEST_CREATED, PULL_REQUEST_UPDATED, PULL_REQUEST_MERGED
   
-  CodeBuildRole:
+  RoleCodeBuild:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -117,7 +117,7 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"       
 
-  LambdaContactFormHandler:
+  LambdaFnContactFormHandler:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Ref ProjectName
@@ -125,9 +125,27 @@ Resources:
       PackageType: Image
       Code: 
         ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
-      Role: !GetAtt LambdaContactHandlerRole.Arn
+      Role: !GetAtt RoleLambdaContactHandler.Arn
 
-  LambdaContactHandlerRole:
+  LambdaUrlContactFormHandler:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref LambdaFnContactFormHandler
+      AuthType: NONE
+      Cors:
+        AllowOrigins: !Ref CorsOrigins
+        AllowMethods:
+          - "POST"
+
+  LambdaPermissionContactFormHandler:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFnContactFormHandler
+      Principal: '*'
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+
+  RoleLambdaContactHandler:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -139,3 +157,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Outputs:
+  UrlContactFormHandler:
+    Value: !GetAtt LambdaUrlContactFormHandler.FunctionUrl
