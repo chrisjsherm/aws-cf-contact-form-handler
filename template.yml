@@ -37,6 +37,24 @@ Resources:
      Type: AWS::ECR::Repository
      Properties:
        RepositoryName: !Ref DockerImageName
+       LifecyclePolicy:
+         LifecyclePolicyText: |
+            {
+                "rules": [
+                    {
+                        "rulePriority": 1,
+                        "description": "Keep only one untagged image, expire all others",
+                        "selection": {
+                            "tagStatus": "untagged",
+                            "countType": "imageCountMoreThan",
+                            "countNumber": 1
+                        },
+                        "action": {
+                            "type": "expire"
+                        }
+                    }
+                ]
+            }    
 
   CodeBuildContactForm:
     Type: AWS::CodeBuild::Project
