@@ -56,6 +56,44 @@ Resources:
                 ]
             }    
 
+  EventImageUpdated:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Watch for updates to the ContactFormHandler image
+      EventPattern:
+        Source: 
+          - "aws.ecr"
+        DetailType:
+          - "ECR Image Action"
+        Detail:
+          ActionType:
+            - "PUSH"
+          Result:
+            - "SUCCESS"
+      Targets:
+        - Arn: !GetAtt SQSImageUpdated.Arn
+          Id: "ImageUpdatedInECRRule"
+
+  SQSImageUpdated:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ImageUpdated
+
+  SQSPolicySendMessage: 
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref SQSImageUpdated
+      PolicyDocument: 
+        Statement: 
+          - 
+            Action: 
+              - "sqs:SendMessage" 
+            Effect: "Allow"
+            Resource: !GetAtt SQSImageUpdated.Arn
+            Principal:  
+              Service: events.amazonaws.com        
+      
   CodeBuildContactForm:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -90,8 +128,7 @@ Resources:
         FilterGroups:
           - - Type: EVENT
               Pattern: PULL_REQUEST_MERGED
-
-  
+    
   RoleCodeBuild:
     Type: AWS::IAM::Role
     Properties:
