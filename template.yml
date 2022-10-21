@@ -32,7 +32,54 @@ Parameters:
       - "false"
     Default: "false"
     
-Resources: 
+Resources:
+##########################################################################
+#   IAM Role to be assumed by the Systems Manager Automation Document                                                       #
+##########################################################################
+  AutomationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ssm.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: automation-update-function-code
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:UpdateFunctionCode
+                Resource: !GetAtt LambdaFnContactFormHandler.Arn
+
+###################################################################################################################
+#SSM document of type "Automation" that is used to invoke a lambda function by passing in the Automation document's
+#execution time paramenter values to the function's payload data
+###################################################################################################################
+  SsmAutomationDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Automation
+      Content:
+        schemaVersion: "0.3"
+        assumeRole: !GetAtt AutomationExecutionRole.Arn
+        description: "Automation document for updating a lambda function"
+        mainSteps:
+        - name: cli_invoke
+          description: Call the AWS CLI UpdateFunctionCode command
+          action: 'aws:executeAwsApi'
+          onFailure: Abort
+          inputs:
+            Service: "lambda"
+            Api: "UpdateFunctionCode"
+            FunctionName: !Ref LambdaFnContactFormHandler
+            ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
+
   EcrRepository:
      Type: AWS::ECR::Repository
      Properties:
@@ -83,7 +130,10 @@ Resources:
             - "latest"
       Targets: 
         - Arn: !GetAtt MySqsQueue.Arn
-          Id: "SQSqueue"   
+          Id: "SQSqueue"
+        - Arn: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:automation-definition/${SsmAutomationDocument}:$DEFAULT"
+          Id: "SystemsManagerAutomation"
+          RoleArn: !GetAtt EventBridgeToToSsmRole.Arn
 
   # Allow EventBridge to invoke SQS
   EventBridgeToToSqsPolicy:
@@ -99,6 +149,28 @@ Resources:
       Queues:
         - Ref: MySqsQueue
       
+  # Allow EventBridge to invoke SSM
+  EventBridgeToToSsmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: send-event-to-ssm
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:StartAutomationExecution
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:automation-definition/${SsmAutomationDocument}:$DEFAULT"
+
   CodeBuildContactForm:
     Type: AWS::CodeBuild::Project
     Properties:
