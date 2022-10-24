@@ -58,8 +58,7 @@ Resources:
                 Resource: !GetAtt LambdaFnContactFormHandler.Arn
 
 ###################################################################################################################
-#SSM document of type "Automation" that is used to invoke a lambda function by passing in the Automation document's
-#execution time paramenter values to the function's payload data
+# SSM document of type "Automation" that for updating Lambda function code
 ###################################################################################################################
   SsmAutomationDocument:
     Type: AWS::SSM::Document
@@ -80,6 +79,9 @@ Resources:
             FunctionName: !Ref LambdaFnContactFormHandler
             ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
 
+###################################################################################################################
+# Docker image repository
+###################################################################################################################
   EcrRepository:
      Type: AWS::ECR::Repository
      Properties:
@@ -103,11 +105,15 @@ Resources:
                 ]
             }    
 
-  # Define the SQS queue
+###################################################################################################################
+# SQS queue that receives messages on Docker image updates
+###################################################################################################################
   MySqsQueue:
     Type: AWS::SQS::Queue
 
-  # Define the event rule to filter for events
+###################################################################################################################
+# Event rule to identify/filter Docker image uploads to ECR
+###################################################################################################################
   EventRule: 
     Type: AWS::Events::Rule
     Properties: 
@@ -135,7 +141,9 @@ Resources:
           Id: "SystemsManagerAutomation"
           RoleArn: !GetAtt EventBridgeToToSsmRole.Arn
 
-  # Allow EventBridge to invoke SQS
+###################################################################################################################
+# Queue Policy to allow ECR to send messages
+###################################################################################################################
   EventBridgeToToSqsPolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -149,7 +157,9 @@ Resources:
       Queues:
         - Ref: MySqsQueue
       
-  # Allow EventBridge to invoke SSM
+###################################################################################################################
+# IAM role to allow EventBridge to start Systems Manager automation
+###################################################################################################################
   EventBridgeToToSsmRole:
     Type: AWS::IAM::Role
     Properties:
@@ -171,6 +181,9 @@ Resources:
                 Action: ssm:StartAutomationExecution
                 Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:automation-definition/${SsmAutomationDocument}:$DEFAULT"
 
+###################################################################################################################
+# Build a new Docker image when pull requests get merged to the Lambda Fn repo
+###################################################################################################################
   CodeBuildContactForm:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -206,6 +219,9 @@ Resources:
           - - Type: EVENT
               Pattern: PULL_REQUEST_MERGED
     
+###################################################################################################################
+# IAM role to give CodeBuild permission to push to ECR and write logs
+###################################################################################################################
   RoleCodeBuild:
     Type: AWS::IAM::Role
     Properties:
@@ -250,6 +266,9 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"       
 
+###################################################################################################################
+# Lambda Fn to handle contact form submissions
+###################################################################################################################
   LambdaFnContactFormHandler:
     Type: AWS::Lambda::Function
     Properties:
@@ -260,6 +279,9 @@ Resources:
         ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
       Role: !GetAtt RoleLambdaContactHandler.Arn
 
+###################################################################################################################
+# Publish the Lambda Fn to a publicly-accessible URL
+###################################################################################################################
   LambdaUrlContactFormHandler:
     Type: AWS::Lambda::Url
     Properties:
@@ -270,6 +292,9 @@ Resources:
         AllowMethods:
           - "POST"
 
+###################################################################################################################
+# Permission for the Lambda Fn to be invoked by anyone
+###################################################################################################################
   LambdaPermissionContactFormHandler:
     Type: AWS::Lambda::Permission
     Properties:
@@ -278,6 +303,9 @@ Resources:
       Action: lambda:InvokeFunctionUrl
       FunctionUrlAuthType: NONE
 
+###################################################################################################################
+# IAM role to allow the Lambda Fn to write logs
+###################################################################################################################
   RoleLambdaContactHandler:
     Type: AWS::IAM::Role
     Properties:
