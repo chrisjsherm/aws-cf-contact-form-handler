@@ -14,6 +14,15 @@ Parameters:
     Description: HTTPS clone URL to the repository that contains the source and the buildspec file.
     Type: String
 
+  HasCodeBuildRun:
+    Description: Has CodeBuild run, thereby uploading Docker Image to ECR
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
+
+# Optional parameters
   CorsOrigins:
     Description: (Optional) Valid origins to be matched in the Access-Control-Allow-Origin header
     Type: CommaDelimitedList
@@ -31,6 +40,11 @@ Parameters:
       - "true"
       - "false"
     Default: "false"
+
+Conditions:
+  IsImageInEcr: !Equals
+    - !Ref HasCodeBuildRun
+    - "true"
     
 Resources:
 ##########################################################################
@@ -38,6 +52,7 @@ Resources:
 ##########################################################################
   AutomationExecutionRole:
     Type: AWS::IAM::Role
+    Condition: IsImageInEcr
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -62,6 +77,7 @@ Resources:
 ###################################################################################################################
   SsmAutomationDocument:
     Type: AWS::SSM::Document
+    Condition: IsImageInEcr
     Properties:
       DocumentType: Automation
       Content:
@@ -116,6 +132,7 @@ Resources:
 ###################################################################################################################
   EventRule: 
     Type: AWS::Events::Rule
+    Condition: IsImageInEcr
     Properties: 
       Description: "EventRule"
       EventPattern: 
@@ -162,6 +179,7 @@ Resources:
 ###################################################################################################################
   EventBridgeToToSsmRole:
     Type: AWS::IAM::Role
+    Condition: IsImageInEcr
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -271,12 +289,16 @@ Resources:
 ###################################################################################################################
   LambdaFnContactFormHandler:
     Type: AWS::Lambda::Function
+    Condition: IsImageInEcr
     Properties:
       FunctionName: !Ref ProjectName
       Description: "Handle a new contact form submission"
       PackageType: Image
       Code: 
         ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
+      Environment:
+        Variables:
+          ValidatedEmailAddress: !Ref EmailAddress
       Role: !GetAtt RoleLambdaContactHandler.Arn
 
 ###################################################################################################################
@@ -284,6 +306,7 @@ Resources:
 ###################################################################################################################
   LambdaUrlContactFormHandler:
     Type: AWS::Lambda::Url
+    Condition: IsImageInEcr
     Properties:
       TargetFunctionArn: !Ref LambdaFnContactFormHandler
       AuthType: NONE
@@ -297,6 +320,7 @@ Resources:
 ###################################################################################################################
   LambdaPermissionContactFormHandler:
     Type: AWS::Lambda::Permission
+    Condition: IsImageInEcr
     Properties:
       FunctionName: !Ref LambdaFnContactFormHandler
       Principal: '*'
@@ -304,10 +328,11 @@ Resources:
       FunctionUrlAuthType: NONE
 
 ###################################################################################################################
-# IAM role to allow the Lambda Fn to write logs
+# IAM role to allow the Lambda Fn to write logs and send emails
 ###################################################################################################################
   RoleLambdaContactHandler:
     Type: AWS::IAM::Role
+    Condition: IsImageInEcr
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -329,6 +354,19 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-Outputs:
-  UrlContactFormHandler:
-    Value: !GetAtt LambdaUrlContactFormHandler.FunctionUrl
+        - PolicyName: "SendEmails"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailAddress}"
+
+###################################################################################################################
+# SES Verified Identity to use as the from email address
+###################################################################################################################
+  SESEmailIdentityFromAddress:
+    Type: AWS::SES::EmailIdentity
+    Properties: 
+      EmailIdentity: !Ref EmailAddress

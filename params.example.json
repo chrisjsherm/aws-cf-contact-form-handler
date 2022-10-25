@@ -1,5 +1,9 @@
 [
   {
+    "ParameterKey": "HasCodeBuildRun",
+    "ParameterValue": "false"
+  },
+  {
     "ParameterKey": "DockerImageName",
     "ParameterValue": "aws-lambda-curl-url"
   },
