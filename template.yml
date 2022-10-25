@@ -28,6 +28,11 @@ Parameters:
     Type: CommaDelimitedList
     Default: "*"
 
+  EmailSubjectSuffix:
+    Description: (Optional) Suffix to append to the email's subject
+    Type: String
+    Default: ''
+
   ProjectName:
     Description: (Optional) Name must be unique across all projects in your AWS account
     Type: String
@@ -298,6 +303,7 @@ Resources:
         ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
       Environment:
         Variables:
+          EmailSubjectSuffix: !Ref EmailSubjectSuffix
           ValidatedEmailAddress: !Ref EmailAddress
       Role: !GetAtt RoleLambdaContactHandler.Arn
 
