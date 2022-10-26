@@ -8,6 +8,12 @@ contact form.
 Modify `params.example.json` with your desired values and rename the file to
 `params.json`.
 
+### SES
+
+You must verify the domain of the email address you are using. You can do this
+by adjusting the domain's DNS configuration according to the settings displayed
+in the AWS SES Console.
+
 ## Deploy
 
 To create the initial CloudFormation stack, run the command below from the root

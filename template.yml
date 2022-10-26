@@ -209,6 +209,7 @@ Resources:
 ###################################################################################################################
   CodeBuildContactForm:
     Type: AWS::CodeBuild::Project
+    DependsOn: LogGroupCodeBuild
     Properties:
       Name: !Ref ProjectName
       Description: "Push Docker image to ECR"
@@ -230,6 +231,10 @@ Resources:
             Value: !Ref EcrRepository
           - Name: IMAGE_TAG
             Value: "latest"
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: !Ref LogGroupCodeBuild
+          Status: ENABLED
       ServiceRole: !GetAtt RoleCodeBuild.Arn
       Source:
         Auth: 
@@ -283,7 +288,6 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource:
@@ -295,6 +299,7 @@ Resources:
   LambdaFnContactFormHandler:
     Type: AWS::Lambda::Function
     Condition: IsImageInEcr
+    DependsOn: LogGroupLambdaFunction
     Properties:
       FunctionName: !Ref ProjectName
       Description: "Handle a new contact form submission"
@@ -356,7 +361,6 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
@@ -367,12 +371,38 @@ Resources:
               - Effect: Allow
                 Action:
                   - ses:SendEmail
-                Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailAddress}"
+                Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:*"
 
 ###################################################################################################################
 # SES Verified Identity to use as the from email address
 ###################################################################################################################
-  SESEmailIdentityFromAddress:
+  SESEmailIdentityFromIdentity:
     Type: AWS::SES::EmailIdentity
     Properties: 
-      EmailIdentity: !Ref EmailAddress
+      EmailIdentity: !Select [1, !Split ["@", !Ref EmailAddress]]
+      DkimAttributes:
+        SigningEnabled: true
+      MailFromAttributes:
+        MailFromDomain: !Sub
+          - aws-ses.${RootDomain}
+          - RootDomain: !Select [1, !Split ["@", !Ref EmailAddress]]
+        BehaviorOnMxFailure: REJECT_MESSAGE
+
+###################################################################################################################
+# CloudWatch Log Group for CodeBuild
+###################################################################################################################
+  LogGroupCodeBuild:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${ProjectName}"
+      RetentionInDays: 30
+
+
+###################################################################################################################
+# CloudWatch Log Group for Lambda Function
+###################################################################################################################
+  LogGroupLambdaFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}"
+      RetentionInDays: 30
