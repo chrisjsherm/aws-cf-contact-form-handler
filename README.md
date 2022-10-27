@@ -22,7 +22,7 @@ your Docker Hub password in SSM Parameter Store.
 
 ### GitHub
 
-You must provide AWS with access to your GitHub repository set in the `GitHubSourceHTTPS`
+You must provide AWS with access to the GitHub repository set in the `GitHubSourceHTTPS`
 parameter. You can provide access by visiting the AWS Console CodeBuild view and
 clicking to create a build project. Do not fill out any fields, instead scroll to
 the "Source" heading and connect to GitHub. Once you successfully connect, you
