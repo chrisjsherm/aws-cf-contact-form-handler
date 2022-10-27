@@ -2,6 +2,10 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Ingest contact form and send email with its contents
 
 Parameters: 
+  DockerHubUsername:
+    Description: Username for authenticating with Docker Hub
+    Type: String
+
   DockerImageName:
     Description: Name of the Docker image stored in ECR
     Type: String
@@ -227,6 +231,8 @@ Resources:
             Value: !Ref "AWS::AccountId"
           - Name: AWS_ECR_REPOSITORY_URI
             Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}
+          - Name: DOCKERHUB_USERNAME
+            Value: !Ref DockerHubUsername
           - Name: IMAGE_REPO_NAME
             Value: !Ref EcrRepository
           - Name: IMAGE_TAG
@@ -282,7 +288,7 @@ Resources:
                   - ecr:PutImage
                   - ecr:UploadLayerPart
                 Resource: "*"
-        - PolicyName: "CodeBuildLogsRole"
+        - PolicyName: "WriteLogs"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -291,7 +297,16 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource:
-                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"       
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
+        - PolicyName: "ReadParameterStore"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/docker/DOCKER_HUB_PASSWORD"
 
 ###################################################################################################################
 # Lambda Fn to handle contact form submissions

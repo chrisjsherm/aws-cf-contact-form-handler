@@ -4,6 +4,10 @@
     "ParameterValue": "false"
   },
   {
+    "ParameterKey": "DockerHubUsername",
+    "ParameterValue": "username"
+  },
+  {
     "ParameterKey": "DockerImageName",
     "ParameterValue": "aws-lambda-curl-url"
   },
