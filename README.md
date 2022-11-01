@@ -20,6 +20,10 @@ Modify `params.example.json` with your desired values and rename the file to
 Run `sh shell-scripts/create-docker-hub-password-param.sh` to securely store
 your Docker Hub password in SSM Parameter Store.
 
+Run `sh shell-scripts/create-turnstile-secret-key-param.sh` to securely store
+your [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/)
+secret key. Turnstile protects the contact form from bots.
+
 ### GitHub
 
 You must provide AWS with access to the GitHub repository set in the `GitHubSourceHTTPS`

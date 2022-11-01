@@ -26,6 +26,10 @@ Parameters:
       - "false"
     Default: "false"
 
+  ProjectName:
+    Description: Name must be unique across all projects in your AWS account
+    Type: String
+
 # Optional parameters
   CorsOrigins:
     Description: (Optional) Valid origins to be matched in the Access-Control-Allow-Origin header
@@ -36,11 +40,6 @@ Parameters:
     Description: (Optional) Suffix to append to the email's subject
     Type: String
     Default: ''
-
-  ProjectName:
-    Description: (Optional) Name must be unique across all projects in your AWS account
-    Type: String
-    Default: ContactFormHandler
 
   RecaptchaEnabled:
     Description: (Optional) Flag indicating if a Google Recaptcha token should be validated.
@@ -298,7 +297,7 @@ Resources:
                   - logs:PutLogEvents
                 Resource:
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
-        - PolicyName: "ReadParameterStore"
+        - PolicyName: "ReadParameterStoreDockerHubPassword"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -387,6 +386,15 @@ Resources:
                 Action:
                   - ses:SendEmail
                 Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:*"
+        - PolicyName: "ReadParameterStoreTurnstileSecretKey"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudflare/${ProjectName}/TURNSTILE_SECRET_KEY"
 
 ###################################################################################################################
 # SES Verified Identity to use as the from email address

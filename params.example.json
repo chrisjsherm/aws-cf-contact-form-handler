@@ -1,5 +1,9 @@
 [
   {
+    "ParameterKey": "ProjectName",
+    "ParameterValue": "ContactFormHandler"
+  },
+  {
     "ParameterKey": "HasCodeBuildRun",
     "ParameterValue": "false"
   },
