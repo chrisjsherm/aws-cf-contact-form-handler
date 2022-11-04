@@ -41,13 +41,18 @@ Parameters:
     Type: String
     Default: ''
 
-  RecaptchaEnabled:
-    Description: (Optional) Flag indicating if a Google Recaptcha token should be validated.
+  CaptchaEnabled:
+    Description: (Optional) Whether to validate a captcha token against Cloudflare Turnstile.
     Type: String
     AllowedValues:
       - "true"
       - "false"
     Default: "false"
+
+  CaptchaFieldName:
+    Description: Field name in the request body containing the captcha's client token
+    Type: String
+    Default: 'cf-turnstile'
 
 Conditions:
   IsImageInEcr: !Equals
@@ -322,6 +327,9 @@ Resources:
         ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepository}:latest"
       Environment:
         Variables:
+          CaptchaEnabled: !Ref CaptchaEnabled
+          CaptchaFieldName: !Ref CaptchaFieldName
+          CaptchaSecretKeyParameterPath: !Sub "cloudflare/${ProjectName}/TURNSTILE_SECRET_KEY"
           EmailSubjectSuffix: !Ref EmailSubjectSuffix
           ValidatedEmailAddress: !Ref EmailAddress
       Role: !GetAtt RoleLambdaContactHandler.Arn

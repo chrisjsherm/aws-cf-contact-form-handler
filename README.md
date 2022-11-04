@@ -22,7 +22,10 @@ your Docker Hub password in SSM Parameter Store.
 
 Run `sh shell-scripts/create-turnstile-secret-key-param.sh` to securely store
 your [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/)
-secret key. Turnstile protects the contact form from bots.
+secret key. Turnstile protects the contact form from bots. You will need to
+visit Cloudflare to configure Turnstile and retrieve the key value. If you do
+not set the `CaptchaEnabled` parameter to `true`, you do not need to complete
+this step.
 
 ### GitHub
 
