@@ -52,7 +52,7 @@ Parameters:
   CaptchaFieldName:
     Description: Field name in the request body containing the captcha's client token
     Type: String
-    Default: 'cf-turnstile'
+    Default: 'cfTurnstileResponse'
 
 Conditions:
   IsImageInEcr: !Equals

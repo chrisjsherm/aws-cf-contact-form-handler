@@ -1,4 +1,4 @@
-read -p "Is Linux jq installed? " -n 1 -r
+read -p "Is Linux jq installed (y/n)? " -n 1 -r
 echo # Move to new line
 
 if [[ ! $REPLY =~ ^[Yy]$ ]]
@@ -15,5 +15,6 @@ else
     --name "/cloudflare/${PROJECT_NAME}/TURNSTILE_SECRET_KEY" \
     --description "Cloudflare Turnstile secret key to protect ${PROJECT_NAME}" \
     --value ${TURNSTILE_SECRET_KEY} \
-    --type "SecureString"
+    --type "SecureString" \
+    --overwrite
 fi
