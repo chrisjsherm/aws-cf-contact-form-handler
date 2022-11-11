@@ -1,3 +1,23 @@
 {
-  "cSpell.words": ["Recaptcha"]
+  "cSpell.words": ["Recaptcha"],
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#86b318",
+    "activityBar.background": "#86b318",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#e3f4fb",
+    "activityBarBadge.foreground": "#15202b",
+    "commandCenter.border": "#e7e7e799",
+    "sash.hoverBorder": "#86b318",
+    "statusBar.background": "#648612",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#86b318",
+    "statusBarItem.remoteBackground": "#648612",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "titleBar.activeBackground": "#648612",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#64861299",
+    "titleBar.inactiveForeground": "#e7e7e799"
+  },
+  "peacock.color": "#648612"
 }

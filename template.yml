@@ -329,7 +329,7 @@ Resources:
         Variables:
           CaptchaEnabled: !Ref CaptchaEnabled
           CaptchaFieldName: !Ref CaptchaFieldName
-          CaptchaSecretKeyParameterPath: !Sub "cloudflare/${ProjectName}/TURNSTILE_SECRET_KEY"
+          CaptchaSecretKeyParameterPath: !Sub "/cloudflare/${ProjectName}/TURNSTILE_SECRET_KEY"
           EmailSubjectSuffix: !Ref EmailSubjectSuffix
           ValidatedEmailAddress: !Ref EmailAddress
       Role: !GetAtt RoleLambdaContactHandler.Arn
@@ -347,6 +347,8 @@ Resources:
         AllowOrigins: !Ref CorsOrigins
         AllowMethods:
           - "POST"
+        AllowHeaders:
+          - "Content-Type"
 
 ###################################################################################################################
 # Permission for the Lambda Fn to be invoked by anyone
@@ -400,7 +402,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - ssm:GetParameters
+                  - ssm:GetParameter
                 Resource:
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudflare/${ProjectName}/TURNSTILE_SECRET_KEY"
 
