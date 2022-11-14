@@ -15,6 +15,11 @@ the message or put it in a junk/spam folder.
 Modify `params.example.json` with your desired values and rename the file to
 `params.json`.
 
+### Lambda Function
+
+Leverage [aws-lambda-contact-us](https://github.com/chrisjsherm/aws-lambda-contact-us)
+to handle contact form requests.
+
 ### SSM Parameter Store
 
 Run `sh shell-scripts/create-docker-hub-password-param.sh` to securely store
