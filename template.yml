@@ -15,11 +15,12 @@ Parameters:
     Type: String
 
   GitHubSourceHTTPS:
-    Description: HTTPS clone URL to the repository that contains the source and the buildspec file.
+    Description: HTTPS clone URL to the repository that contains the source and
+      the buildspec file.
     Type: String
 
   HasCodeBuildRun:
-    Description: Has CodeBuild run, thereby uploading Docker Image to ECR
+    Description: Has CodeBuild run, thereby uploading Docker Image to ECR?
     Type: String
     AllowedValues:
       - "true"
@@ -42,7 +43,8 @@ Parameters:
     Default: ''
 
   CaptchaEnabled:
-    Description: (Optional) Whether to validate a captcha token against Cloudflare Turnstile.
+    Description: (Optional) Whether to validate a captcha token against 
+      Cloudflare Turnstile.
     Type: String
     AllowedValues:
       - "true"
@@ -50,7 +52,8 @@ Parameters:
     Default: "false"
 
   CaptchaFieldName:
-    Description: Field name in the request body containing the captcha's client token
+    Description: Field name in the request body containing the captcha's client 
+      token
     Type: String
     Default: 'cfTurnstileResponse'
 
@@ -63,7 +66,7 @@ Resources:
 ##########################################################################
 #   IAM Role to be assumed by the Systems Manager Automation Document                                                       #
 ##########################################################################
-  AutomationExecutionRole:
+  RoleAutomaticallyUpdateLambda:
     Type: AWS::IAM::Role
     Condition: IsImageInEcr
     Properties:
@@ -86,7 +89,7 @@ Resources:
                 Resource: !GetAtt LambdaFnContactFormHandler.Arn
 
 ###################################################################################################################
-# SSM document of type "Automation" that for updating Lambda function code
+# SSM document of type "Automation" for updating Lambda function code
 ###################################################################################################################
   SsmAutomationDocument:
     Type: AWS::SSM::Document
@@ -95,7 +98,7 @@ Resources:
       DocumentType: Automation
       Content:
         schemaVersion: "0.3"
-        assumeRole: !GetAtt AutomationExecutionRole.Arn
+        assumeRole: !GetAtt RoleAutomaticallyUpdateLambda.Arn
         description: "Automation document for updating a lambda function"
         mainSteps:
         - name: cli_invoke
@@ -135,19 +138,13 @@ Resources:
             }    
 
 ###################################################################################################################
-# SQS queue that receives messages on Docker image updates
-###################################################################################################################
-  MySqsQueue:
-    Type: AWS::SQS::Queue
-
-###################################################################################################################
 # Event rule to identify/filter Docker image uploads to ECR
 ###################################################################################################################
   EventRule: 
     Type: AWS::Events::Rule
     Condition: IsImageInEcr
     Properties: 
-      Description: "EventRule"
+      Description: "Watch for Docker image pushes to ECR"
       EventPattern: 
         account: 
           - !Sub '${AWS::AccountId}'
@@ -165,35 +162,18 @@ Resources:
           image-tag:
             - "latest"
       Targets: 
-        - Arn: !GetAtt MySqsQueue.Arn
-          Id: "SQSqueue"
         - Arn: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:automation-definition/${SsmAutomationDocument}:$DEFAULT"
           Id: "SystemsManagerAutomation"
-          RoleArn: !GetAtt EventBridgeToToSsmRole.Arn
-
-###################################################################################################################
-# Queue Policy to allow ECR to send messages
-###################################################################################################################
-  EventBridgeToToSqsPolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      PolicyDocument:
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: events.amazonaws.com
-          Action: SQS:SendMessage
-          Resource:  !GetAtt MySqsQueue.Arn
-      Queues:
-        - Ref: MySqsQueue
+          RoleArn: !GetAtt RoleEventBridgeToToSsm.Arn
       
 ###################################################################################################################
 # IAM role to allow EventBridge to start Systems Manager automation
 ###################################################################################################################
-  EventBridgeToToSsmRole:
+  RoleEventBridgeToToSsm:
     Type: AWS::IAM::Role
     Condition: IsImageInEcr
     Properties:
+      Description: "Allow EventBridge to start Systems Manager automation"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -215,12 +195,12 @@ Resources:
 ###################################################################################################################
 # Build a new Docker image when pull requests get merged to the Lambda Fn repo
 ###################################################################################################################
-  CodeBuildContactForm:
+  CodeBuildLambdaRepo:
     Type: AWS::CodeBuild::Project
     DependsOn: LogGroupCodeBuild
     Properties:
       Name: !Ref ProjectName
-      Description: "Push Docker image to ECR"
+      Description: "Build Docker image and push to ECR"
       Artifacts:
         Type: NO_ARTIFACTS
       Environment:
@@ -279,7 +259,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: ecr:GetAuthorizationToken
-                Resource: "*"
+                Resource: "*" # Login command in buildspec.yml does not seem to allow specifying
         - PolicyName: "PushImageToEcr"
           PolicyDocument:
             Version: "2012-10-17"
@@ -291,7 +271,7 @@ Resources:
                   - ecr:InitiateLayerUpload
                   - ecr:PutImage
                   - ecr:UploadLayerPart
-                Resource: "*"
+                Resource: "*" # Login command in buildspec.yml does not seem to allow specifying
         - PolicyName: "WriteLogs"
           PolicyDocument:
             Version: "2012-10-17"
@@ -363,12 +343,13 @@ Resources:
       FunctionUrlAuthType: NONE
 
 ###################################################################################################################
-# IAM role to allow the Lambda Fn to write logs and send emails
+# IAM role to allow the Lambda Fn to write logs, send emails, and get the Turnstile key from SSM
 ###################################################################################################################
   RoleLambdaContactHandler:
     Type: AWS::IAM::Role
     Condition: IsImageInEcr
     Properties:
+      Description: "Allow Lambda Fn to write logs, send emails, and get the Turnstile key from SSM"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -409,7 +390,7 @@ Resources:
 ###################################################################################################################
 # SES Verified Identity to use as the from email address
 ###################################################################################################################
-  SESEmailIdentityFromIdentity:
+  SESEmailIdentityFromEmailDomain:
     Type: AWS::SES::EmailIdentity
     Properties: 
       EmailIdentity: !Select [1, !Split ["@", !Ref EmailAddress]]
@@ -420,6 +401,8 @@ Resources:
           - aws-ses.${RootDomain}
           - RootDomain: !Select [1, !Split ["@", !Ref EmailAddress]]
         BehaviorOnMxFailure: REJECT_MESSAGE
+      FeedbackAttributes:
+        EmailForwardingEnabled: true
 
 ###################################################################################################################
 # CloudWatch Log Group for CodeBuild
@@ -439,3 +422,4 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/lambda/${ProjectName}"
       RetentionInDays: 30
+
