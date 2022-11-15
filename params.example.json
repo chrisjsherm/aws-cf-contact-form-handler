@@ -8,16 +8,24 @@
     "ParameterValue": "false"
   },
   {
+    "ParameterKey": "CaptchaEnabled",
+    "ParameterValue": "false"
+  },
+  {
     "ParameterKey": "DockerHubUsername",
-    "ParameterValue": "username"
+    "ParameterValue": "my-username"
   },
   {
     "ParameterKey": "DockerImageName",
-    "ParameterValue": "aws-lambda-curl-url"
+    "ParameterValue": "aws-lambda-contact-us"
   },
   {
     "ParameterKey": "EmailAddress",
     "ParameterValue": "me@example.com"
+  },
+  {
+    "ParameterKey": "EmailSubjectSuffix",
+    "ParameterValue": "| Sherman Digital"
   },
   {
     "ParameterKey": "GitHubSourceHTTPS",

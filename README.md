@@ -20,7 +20,7 @@ Modify `params.example.json` with your desired values and rename the file to
 Leverage [aws-lambda-contact-us](https://github.com/chrisjsherm/aws-lambda-contact-us)
 to handle contact form requests.
 
-### SSM Parameter Store
+### Docker Hub
 
 Run `sh shell-scripts/create-docker-hub-password-param.sh` to securely store
 your Docker Hub password in AWS SSM Parameter Store.
@@ -30,23 +30,24 @@ your Docker Hub password in AWS SSM Parameter Store.
 Run `sh shell-scripts/create-turnstile-secret-key-param.sh` to securely store
 your [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/)
 secret key. Turnstile protects the contact form from bots. You will need to
-visit Cloudflare to configure Turnstile and retrieve the key value. If you do
-not set the `CaptchaEnabled` parameter to `true`, you do not need to complete
-this step.
+visit Cloudflare to configure Turnstile and retrieve the key value.
+
+> If you do not set the `CaptchaEnabled` parameter to `true`, you do not need to
+> complete this step.
 
 ### GitHub
 
 You must provide AWS with access to the GitHub repository you set in the
 `GitHubSourceHTTPS` parameter. You can provide access by visiting the AWS
-Console CodeBuild view and clicking to create a build project. Do not fill out
-any fields, instead scroll to the "Source" heading and connect to GitHub. Once
+Console's CodeBuild view and clicking to create a build project. Do not fill out
+any fields; instead, scroll to the "Source" heading and connect to GitHub. Once
 you successfully connect, you can close the browser tab.
 
 ### SES
 
 You must verify the domain of the email address you are using. You can do this
 by adjusting the domain's DNS configuration according to the settings displayed
-in the AWS SES Console (must create CloudFormation stack first).
+in the AWS SES Console (must create CloudFormation stack to see settings).
 
 ## Deploy
 
@@ -55,7 +56,7 @@ of the repository.
 
 > Note: The stack will fail if you do not initially run it with the
 > `HasCodeBuildRun` parameter set to `"false"`. Once you perform the initial create,
-> visit CodeBuild in the AWS Console and start a build. This will publish the
+> then visit CodeBuild in the AWS Console and start a build. This will publish the
 > Docker image to AWS ECR using the `buildspec.yml` from the repository set via
 > the `GitHubSourceHTTPS` parameter. After the image is in ECR, set the
 > `HasCodeBuildRun` parameter to `"true"` and update the stack.
